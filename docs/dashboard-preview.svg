@@ -1,0 +1,89 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" rx="32" fill="#09111B"/>
+  <rect x="28" y="28" width="1224" height="664" rx="28" fill="#101A28" stroke="#243248"/>
+  <rect x="60" y="60" width="1160" height="110" rx="26" fill="#162232" stroke="#2A3B54"/>
+  <rect x="88" y="88" width="58" height="58" rx="18" fill="url(#badge)"/>
+  <text x="102" y="126" fill="#09111B" font-family="Avenir Next, sans-serif" font-size="24" font-weight="700">pc</text>
+  <text x="170" y="112" fill="#F1F6FF" font-family="Avenir Next, sans-serif" font-size="30" font-weight="700">portctl</text>
+  <text x="170" y="140" fill="#8FA4BB" font-family="Avenir Next, sans-serif" font-size="18">manage local ports without memorizing lsof</text>
+  <rect x="520" y="86" width="370" height="58" rx="18" fill="#0E1623" stroke="#243248"/>
+  <text x="548" y="122" fill="#6C8198" font-family="Avenir Next, sans-serif" font-size="18">Search by process, port, tag, or command</text>
+  <rect x="944" y="86" width="118" height="58" rx="18" fill="#0E1623" stroke="#243248"/>
+  <text x="977" y="122" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">Cards</text>
+  <rect x="1078" y="86" width="106" height="58" rx="18" fill="#0E1623" stroke="#243248"/>
+  <text x="1102" y="122" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">Dark</text>
+  <g>
+    <rect x="60" y="204" width="360" height="228" rx="24" fill="#142030" stroke="#2A3B54"/>
+    <text x="88" y="244" fill="#8FA4BB" font-family="Menlo, monospace" font-size="18">||| :3000</text>
+    <circle cx="378" cy="238" r="6" fill="#43CB80"/>
+    <text x="88" y="300" fill="#F1F6FF" font-family="Avenir Next, sans-serif" font-size="34" font-weight="700">project-a</text>
+    <text x="308" y="300" fill="#8FA4BB" font-family="Avenir Next, sans-serif" font-size="18">PID 42671</text>
+    <text x="88" y="336" fill="#8FA4BB" font-family="Avenir Next, sans-serif" font-size="18">2:11 uptime</text>
+    <text x="88" y="380" fill="#8FA4BB" font-family="Avenir Next, sans-serif" font-size="18">CPU 2.3%   MEM 45MB   web</text>
+    <rect x="88" y="396" width="92" height="32" rx="16" fill="#102A3A" stroke="#274965"/>
+    <text x="112" y="418" fill="#BEEBFF" font-family="Avenir Next, sans-serif" font-size="16">frontend</text>
+    <rect x="192" y="396" width="68" height="32" rx="16" fill="#102A3A" stroke="#274965"/>
+    <text x="218" y="418" fill="#BEEBFF" font-family="Avenir Next, sans-serif" font-size="16">main</text>
+    <rect x="88" y="452" width="82" height="42" rx="14" fill="#31161C" stroke="#6E313D"/>
+    <text x="112" y="479" fill="#FFB6BE" font-family="Avenir Next, sans-serif" font-size="18">Kill</text>
+    <rect x="182" y="452" width="124" height="42" rx="14" fill="#152334" stroke="#2A3B54"/>
+    <text x="202" y="479" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">Switch Port</text>
+    <rect x="318" y="452" width="62" height="42" rx="14" fill="#152334" stroke="#2A3B54"/>
+    <text x="338" y="479" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">Pin</text>
+  </g>
+  <g>
+    <rect x="452" y="204" width="360" height="228" rx="24" fill="#142030" stroke="#2A3B54"/>
+    <text x="480" y="244" fill="#8FA4BB" font-family="Menlo, monospace" font-size="18">||| :5173</text>
+    <circle cx="770" cy="238" r="6" fill="#43CB80"/>
+    <text x="480" y="300" fill="#F1F6FF" font-family="Avenir Next, sans-serif" font-size="34" font-weight="700">hypothesis-test</text>
+    <text x="708" y="300" fill="#8FA4BB" font-family="Avenir Next, sans-serif" font-size="18">PID 42881</text>
+    <text x="480" y="336" fill="#8FA4BB" font-family="Avenir Next, sans-serif" font-size="18">18m uptime</text>
+    <text x="480" y="380" fill="#8FA4BB" font-family="Avenir Next, sans-serif" font-size="18">CPU 1.1%   MEM 61MB   web api</text>
+    <rect x="480" y="396" width="94" height="32" rx="16" fill="#163320" stroke="#2B6B43"/>
+    <text x="508" y="418" fill="#CCF8DD" font-family="Avenir Next, sans-serif" font-size="16">reserved</text>
+    <rect x="586" y="396" width="104" height="32" rx="16" fill="#102A3A" stroke="#274965"/>
+    <text x="616" y="418" fill="#BEEBFF" font-family="Avenir Next, sans-serif" font-size="16">experiments</text>
+    <rect x="480" y="452" width="82" height="42" rx="14" fill="#31161C" stroke="#6E313D"/>
+    <text x="504" y="479" fill="#FFB6BE" font-family="Avenir Next, sans-serif" font-size="18">Kill</text>
+    <rect x="574" y="452" width="124" height="42" rx="14" fill="#152334" stroke="#2A3B54"/>
+    <text x="594" y="479" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">Switch Port</text>
+    <rect x="710" y="452" width="62" height="42" rx="14" fill="#152334" stroke="#2A3B54"/>
+    <text x="730" y="479" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">Pin</text>
+  </g>
+  <g>
+    <rect x="844" y="204" width="376" height="228" rx="24" fill="#142030" stroke="#2A3B54"/>
+    <text x="872" y="244" fill="#8FA4BB" font-family="Menlo, monospace" font-size="18">||| :5432</text>
+    <circle cx="1178" cy="238" r="6" fill="#43CB80"/>
+    <text x="872" y="300" fill="#F1F6FF" font-family="Avenir Next, sans-serif" font-size="34" font-weight="700">postgres</text>
+    <text x="1084" y="300" fill="#8FA4BB" font-family="Avenir Next, sans-serif" font-size="18">PID 2319</text>
+    <text x="872" y="336" fill="#8FA4BB" font-family="Avenir Next, sans-serif" font-size="18">5h uptime</text>
+    <text x="872" y="380" fill="#8FA4BB" font-family="Avenir Next, sans-serif" font-size="18">CPU 0.4%   MEM 128MB   database</text>
+    <rect x="872" y="396" width="104" height="32" rx="16" fill="#102A3A" stroke="#274965"/>
+    <text x="908" y="418" fill="#BEEBFF" font-family="Avenir Next, sans-serif" font-size="16">database</text>
+    <rect x="872" y="452" width="82" height="42" rx="14" fill="#31161C" stroke="#6E313D"/>
+    <text x="896" y="479" fill="#FFB6BE" font-family="Avenir Next, sans-serif" font-size="18">Kill</text>
+    <rect x="966" y="452" width="124" height="42" rx="14" fill="#152334" stroke="#2A3B54"/>
+    <text x="986" y="479" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">Switch Port</text>
+    <rect x="1102" y="452" width="62" height="42" rx="14" fill="#152334" stroke="#2A3B54"/>
+    <text x="1122" y="479" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">Pin</text>
+  </g>
+  <g>
+    <rect x="60" y="462" width="1160" height="192" rx="24" fill="#111A28" stroke="#223146"/>
+    <text x="92" y="506" fill="#F1F6FF" font-family="Avenir Next, sans-serif" font-size="24" font-weight="700">Settings</text>
+    <text x="92" y="538" fill="#8FA4BB" font-family="Avenir Next, sans-serif" font-size="18">Reservations, blocked ports, pinned cards, theme, and daemon status in one place.</text>
+    <rect x="92" y="566" width="220" height="48" rx="16" fill="#152334" stroke="#2A3B54"/>
+    <text x="118" y="596" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">Dashboard port: 47777</text>
+    <rect x="326" y="566" width="220" height="48" rx="16" fill="#152334" stroke="#2A3B54"/>
+    <text x="352" y="596" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">Polling: 1000ms</text>
+    <rect x="560" y="566" width="220" height="48" rx="16" fill="#152334" stroke="#2A3B54"/>
+    <text x="586" y="596" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">Theme: dark</text>
+    <rect x="794" y="566" width="386" height="48" rx="16" fill="#152334" stroke="#2A3B54"/>
+    <text x="822" y="596" fill="#EAF1FF" font-family="Avenir Next, sans-serif" font-size="18">GitHub: august-andersen/portctl</text>
+  </g>
+  <defs>
+    <linearGradient id="badge" x1="88" y1="88" x2="146" y2="146" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#76D4F5"/>
+      <stop offset="1" stop-color="#43CB80"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -1,26 +1,26 @@
 # portctl
 
-[![GitHub Release](https://img.shields.io/github/v/release/august-andersen/portctl?display_name=tag)](https://github.com/august-andersen/portctl/releases)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-Dashboard-61DAFB?logo=react&logoColor=0b1220)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-Daemon-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![macOS](https://img.shields.io/badge/macOS-Only-111111?logo=apple&logoColor=white)](https://www.apple.com/macos/)
 [![GitHub License](https://img.shields.io/github/license/august-andersen/portctl)](https://github.com/august-andersen/portctl/blob/main/LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/august-andersen/portctl?style=social)](https://github.com/august-andersen/portctl/stargazers)
-[![GitHub Last Commit](https://img.shields.io/github/last-commit/august-andersen/portctl)](https://github.com/august-andersen/portctl/commits/main)
 
-Local-only macOS dashboard for seeing what is listening on your ports, moving processes between ports, and reserving the ports you always want kept free.
+Persistent local port management for macOS, with a daemon-backed dashboard for inspecting listeners, reassigning ports, and enforcing the port layout you actually want.
 
 ![portctl dashboard preview](preview-image.png)
 
 ## Features
 
-- Background daemon with a localhost-only dashboard at `127.0.0.1`
-- Global `portctl` CLI for start, stop, restart, status, open, and uninstall
-- 1-second polling of listening TCP ports with `lsof` and `ps`
-- Card and table views for process names, PIDs, uptime, CPU, memory, tags, and status
-- Kill, suspend, resume, and restart-on-a-new-port actions from the UI
-- Reservation system that auto-migrates matching processes back to their preferred ports
-- Blocked ports that are enforced automatically
-- Pinned cards for ports you want visible even when nothing is running
-- In-memory log capture for processes that portctl restarts or launches
-- Dark and light themes with settings persisted in `~/.portctl/config.json`
+- Background daemon with a localhost-only dashboard and global `portctl` CLI
+- Live port discovery on macOS using `lsof` and `ps`, refreshed every second
+- Grouped process cards with CPU, memory, uptime, tags, and multi-port visibility
+- One-click process control for kill, suspend, resume, restart, and port reassignment
+- Port reservations that automatically move known apps back to their preferred ports
+- Blocked ports and pinned ports for keeping your local environment predictable
+- Hidden, renamed, tagged, and manually ungrouped cards for personal workflow control
+- Log viewer for processes started or restarted through `portctl`
+- Card and table views, drag reordering, theme settings, and persistent local config
 
 ## Quick Start
 

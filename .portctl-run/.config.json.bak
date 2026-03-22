@@ -8,7 +8,17 @@
     "cardClickBehavior": "openBrowser",
     "logBufferSize": 10000
   },
-  "reservations": [],
+  "reservations": [
+    {
+      "port": 54430,
+      "matcher": {
+        "type": "command_contains",
+        "value": "node"
+      },
+      "restartTemplate": null,
+      "label": "node"
+    }
+  ],
   "blockedPorts": [],
   "pinnedPorts": [
     3000,
@@ -20,20 +30,25 @@
     "Raycast",
     "Cursor Helper (Plugin)"
   ],
+  "ungroupedGroups": [
+    "app:python"
+  ],
   "tags": {
     "port:54430": []
   },
   "cardOrder": [
     "app:portctl",
-    "app:github desktop helper (renderer",
-    "app:cursor helper (plugin)",
+    "app:viral studios",
     "app:ollama",
-    "app:python",
-    "app:raycast"
+    "app:kotrade",
+    "app:github desktop helper (renderer",
+    "app:node"
   ],
   "customNames": {
     "port:54430": "portctl",
-    "port:37054": "portctl"
+    "port:37054": "portctl",
+    "port:8080": "KOTrade",
+    "port:3000": "Viral Studios"
   },
   "customRestartCommands": {}
 }

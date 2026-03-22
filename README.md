@@ -1,7 +1,6 @@
 # portctl
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-Dashboard-61DAFB?logo=react&logoColor=0b1220)](https://react.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-Daemon-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![macOS](https://img.shields.io/badge/macOS-Only-111111?logo=apple&logoColor=white)](https://www.apple.com/macos/)
 [![GitHub License](https://img.shields.io/github/license/august-andersen/portctl)](https://github.com/august-andersen/portctl/blob/main/LICENSE)

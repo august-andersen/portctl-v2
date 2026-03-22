@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "settings": {
+    "dashboardPort": 54430,
+    "pollingInterval": 1000,
+    "defaultView": "card",
+    "theme": "dark",
+    "cardClickBehavior": "openBrowser",
+    "logBufferSize": 10000
+  },
+  "reservations": [],
+  "blockedPorts": [],
+  "pinnedPorts": [
+    3000,
+    8080,
+    54430
+  ],
+  "hiddenProcesses": [
+    "Raycast",
+    "Cursor Helper (Plugin)"
+  ],
+  "tags": {
+    "port:54430": []
+  },
+  "cardOrder": [
+    "app:portctl",
+    "app:github desktop helper (renderer",
+    "app:cursor helper (plugin)",
+    "app:ollama",
+    "app:python",
+    "app:raycast"
+  ],
+  "customNames": {
+    "port:54430": "portctl",
+    "port:37054": "portctl"
+  },
+  "customRestartCommands": {}
+}

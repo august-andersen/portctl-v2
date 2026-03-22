@@ -10,7 +10,7 @@ const typedConfigs = tseslint.configs.recommendedTypeChecked.map((config) => ({
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'node_modules'],
+    ignores: ['dist', 'node_modules', 'tailwind.config.ts'],
   },
   js.configs.recommended,
   ...typedConfigs,

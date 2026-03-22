@@ -43,8 +43,10 @@ export interface PortctlConfig {
   reservations: Reservation[];
   blockedPorts: number[];
   pinnedPorts: number[];
+  hiddenProcesses: string[];
   tags: Record<string, string[]>;
-  cardOrder: number[];
+  cardOrder: string[];
+  customNames: Record<string, string>;
   customRestartCommands: Record<string, string>;
 }
 
@@ -54,7 +56,7 @@ export interface PortReservationSummary {
   port: number;
 }
 
-export interface ProcessRecord {
+export interface PortProcess {
   port: number;
   ports: number[];
   pid: number;
@@ -79,6 +81,31 @@ export interface ProcessRecord {
   logStatus: LogStatus;
   reservation: PortReservationSummary | null;
   lastError: string | null;
+}
+
+export type ProcessRecord = PortProcess;
+
+export interface ProcessGroup {
+  id: string;
+  displayName: string;
+  processes: PortProcess[];
+  primaryProcess: PortProcess;
+  ports: number[];
+  pid: number;
+  cpuPercent: number | null;
+  memoryRssKb: number | null;
+  uptime: string | null;
+  status: ProcessStatus;
+  classifications: ProcessType[];
+  primaryClassification: ProcessType;
+  tags: string[];
+  hiddenName: string;
+  isHidden: boolean;
+  isSystemGroup: boolean;
+  hasPinnedSlot: boolean;
+  hasActiveProcess: boolean;
+  isPortctl: boolean;
+  section: 'pinned' | 'processes' | 'system' | 'hidden';
 }
 
 export interface DashboardSnapshot {
@@ -151,7 +178,9 @@ export const DEFAULT_CONFIG: PortctlConfig = {
   reservations: [],
   blockedPorts: [],
   pinnedPorts: [],
+  hiddenProcesses: [],
   tags: {},
   cardOrder: [],
+  customNames: {},
   customRestartCommands: {}
 };

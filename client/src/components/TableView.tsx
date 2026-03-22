@@ -1,31 +1,31 @@
 import { useMemo, useState } from 'react';
 
-import type { ProcessRecord } from '@shared/types';
+import type { ProcessGroup } from '@shared/types';
 
 import { formatCpu, formatMemory } from '../utils/format';
 
 interface TableViewProps {
-  processes: ProcessRecord[];
-  pendingPorts: number[];
-  onKill: (processRecord: ProcessRecord) => void;
-  onMove: (processRecord: ProcessRecord) => void;
-  onToggleSuspend: (processRecord: ProcessRecord) => void;
-  onPrimaryOpen: (processRecord: ProcessRecord) => void;
-  onViewLogs: (processRecord: ProcessRecord) => void;
-  onTogglePin: (processRecord: ProcessRecord) => void;
+  groups: ProcessGroup[];
+  pendingIds: string[];
+  onKill: (group: ProcessGroup) => void;
+  onMove: (group: ProcessGroup) => void;
+  onToggleSuspend: (group: ProcessGroup) => void;
+  onPrimaryOpen: (group: ProcessGroup) => void;
+  onViewLogs: (group: ProcessGroup) => void;
+  onTogglePin: (group: ProcessGroup) => void;
 }
 
 type SortKey =
-  | 'port'
-  | 'processName'
+  | 'ports'
+  | 'displayName'
   | 'status'
   | 'uptime'
   | 'cpu'
   | 'memory';
 
 export function TableView({
-  processes,
-  pendingPorts,
+  groups,
+  pendingIds,
   onKill,
   onMove,
   onToggleSuspend,
@@ -33,19 +33,19 @@ export function TableView({
   onViewLogs,
   onTogglePin,
 }: TableViewProps): JSX.Element {
-  const [sortKey, setSortKey] = useState<SortKey>('port');
+  const [sortKey, setSortKey] = useState<SortKey>('ports');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  const sortedProcesses = useMemo(() => {
-    const sorted = [...processes];
+  const sortedGroups = useMemo(() => {
+    const sorted = [...groups];
     sorted.sort((left, right) => {
       const factor = sortDirection === 'asc' ? 1 : -1;
 
       switch (sortKey) {
-        case 'port':
-          return (left.port - right.port) * factor;
-        case 'processName':
-          return left.processName.localeCompare(right.processName) * factor;
+        case 'ports':
+          return ((left.ports[0] ?? 0) - (right.ports[0] ?? 0)) * factor;
+        case 'displayName':
+          return left.displayName.localeCompare(right.displayName) * factor;
         case 'status':
           return left.status.localeCompare(right.status) * factor;
         case 'uptime':
@@ -57,7 +57,7 @@ export function TableView({
       }
     });
     return sorted;
-  }, [processes, sortDirection, sortKey]);
+  }, [groups, sortDirection, sortKey]);
 
   const toggleSort = (nextKey: SortKey): void => {
     if (sortKey === nextKey) {
@@ -75,14 +75,14 @@ export function TableView({
         <thead>
           <tr>
             <th>
-              <button className="ghost-button" onClick={() => toggleSort('port')} type="button">
-                Port
+              <button className="ghost-button" onClick={() => toggleSort('ports')} type="button">
+                Ports
               </button>
             </th>
             <th>
               <button
                 className="ghost-button"
-                onClick={() => toggleSort('processName')}
+                onClick={() => toggleSort('displayName')}
                 type="button"
               >
                 Process
@@ -114,21 +114,21 @@ export function TableView({
           </tr>
         </thead>
         <tbody>
-          {sortedProcesses.map((processRecord) => (
-            <tr key={processRecord.port}>
-              <td>:{processRecord.port}</td>
+          {sortedGroups.map((group) => (
+            <tr key={group.id}>
+              <td>{group.ports.map((port) => `:${port}`).join(', ')}</td>
               <td>
-                <strong>{processRecord.processName}</strong>
-                <div className="muted">{processRecord.primaryClassification}</div>
+                <strong>{group.displayName}</strong>
+                <div className="muted">{group.primaryClassification}</div>
               </td>
-              <td>{processRecord.pid || '--'}</td>
-              <td>{processRecord.status}</td>
-              <td>{processRecord.uptime ?? 'n/a'}</td>
-              <td>{formatCpu(processRecord.cpuPercent)}</td>
-              <td>{formatMemory(processRecord.memoryRssKb)}</td>
+              <td>{group.pid || '--'}</td>
+              <td>{group.status}</td>
+              <td>{group.uptime ?? 'n/a'}</td>
+              <td>{formatCpu(group.cpuPercent)}</td>
+              <td>{formatMemory(group.memoryRssKb)}</td>
               <td>
                 <div className="badges">
-                  {processRecord.tags.map((tag) => (
+                  {group.tags.map((tag) => (
                     <span className="badge" key={tag}>
                       {tag}
                     </span>
@@ -137,12 +137,12 @@ export function TableView({
               </td>
               <td>
                 <div className="table-actions">
-                  {processRecord.status !== 'empty' ? (
+                  {group.status !== 'empty' ? (
                     <>
                       <button
                         className="ghost-button"
                         onClick={() => {
-                          onPrimaryOpen(processRecord);
+                          onPrimaryOpen(group);
                         }}
                         type="button"
                       >
@@ -150,9 +150,9 @@ export function TableView({
                       </button>
                       <button
                         className="ghost-button"
-                        disabled={pendingPorts.includes(processRecord.port)}
+                        disabled={pendingIds.includes(group.id)}
                         onClick={() => {
-                          onViewLogs(processRecord);
+                          onViewLogs(group);
                         }}
                         type="button"
                       >
@@ -160,9 +160,9 @@ export function TableView({
                       </button>
                       <button
                         className="ghost-button"
-                        disabled={pendingPorts.includes(processRecord.port)}
+                        disabled={pendingIds.includes(group.id)}
                         onClick={() => {
-                          onMove(processRecord);
+                          onMove(group);
                         }}
                         type="button"
                       >
@@ -170,19 +170,19 @@ export function TableView({
                       </button>
                       <button
                         className="ghost-button"
-                        disabled={pendingPorts.includes(processRecord.port)}
+                        disabled={pendingIds.includes(group.id)}
                         onClick={() => {
-                          onToggleSuspend(processRecord);
+                          onToggleSuspend(group);
                         }}
                         type="button"
                       >
-                        {processRecord.status === 'suspended' ? 'Resume' : 'Suspend'}
+                        {group.status === 'suspended' ? 'Resume' : 'Suspend'}
                       </button>
                       <button
                         className="danger-button"
-                        disabled={pendingPorts.includes(processRecord.port)}
+                        disabled={pendingIds.includes(group.id)}
                         onClick={() => {
-                          onKill(processRecord);
+                          onKill(group);
                         }}
                         type="button"
                       >
@@ -193,7 +193,7 @@ export function TableView({
                   <button
                     className="ghost-button"
                     onClick={() => {
-                      onTogglePin(processRecord);
+                      onTogglePin(group);
                     }}
                     type="button"
                   >

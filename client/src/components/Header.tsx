@@ -12,6 +12,12 @@ interface HeaderProps {
   theme: ThemeMode;
   onToggleTheme: () => void;
   onOpenSettings: () => void;
+  hiddenCount: number;
+  showHidden: boolean;
+  onToggleHidden: () => void;
+  systemCount: number;
+  showSystem: boolean;
+  onToggleSystem: () => void;
 }
 
 const FILTERS: Array<{ label: string; value: ProcessType | 'all' }> = [
@@ -35,6 +41,12 @@ export function Header({
   theme,
   onToggleTheme,
   onOpenSettings,
+  hiddenCount,
+  showHidden,
+  onToggleHidden,
+  systemCount,
+  showSystem,
+  onToggleSystem,
 }: HeaderProps): JSX.Element {
   return (
     <header className="panel header-bar">
@@ -101,6 +113,12 @@ export function Header({
           </button>
         </div>
 
+        <button className={showSystem ? 'chip-active' : 'chip'} onClick={onToggleSystem} type="button">
+          Sys {systemCount > 0 ? `(${systemCount})` : ''}
+        </button>
+        <button className={showHidden ? 'chip-active' : 'chip'} onClick={onToggleHidden} type="button">
+          Hidden {hiddenCount > 0 ? `(${hiddenCount})` : ''}
+        </button>
         <button className="icon-button" onClick={onToggleTheme} type="button">
           {theme === 'dark' ? 'Light' : 'Dark'}
         </button>

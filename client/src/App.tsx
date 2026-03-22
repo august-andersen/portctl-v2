@@ -5,8 +5,9 @@ import type {
   DashboardSnapshot,
   EventLevel,
   EventRecord,
+  PortProcess,
   PortctlConfig,
-  ProcessRecord,
+  ProcessGroup,
   Reservation,
   StatusResponse,
   ViewMode,
@@ -25,15 +26,43 @@ import { TagEditor } from './components/TagEditor';
 import { ToastViewport, type ToastItem } from './components/Toast';
 import { fetchJson, postJson } from './utils/api';
 import { filterText } from './utils/format';
+import { getDisplayName, groupProcesses } from './utils/groupProcesses';
 
-function getTagStorageKey(processRecord: ProcessRecord): string {
+function getTagStorageKey(processRecord: PortProcess): string {
   return processRecord.reservation
     ? `matcher:${processRecord.reservation.matcher.value}`
     : `port:${processRecord.port}`;
 }
 
-function usesBrowserOpen(processRecord: ProcessRecord): boolean {
-  return processRecord.classifications.includes('web');
+function getCustomNameKey(processRecord: PortProcess): string {
+  return `port:${processRecord.port}`;
+}
+
+function usesBrowserOpen(group: ProcessGroup): boolean {
+  return group.classifications.includes('web');
+}
+
+function sortGroups(groups: ProcessGroup[], cardOrder: string[]): ProcessGroup[] {
+  const orderLookup = new Map(cardOrder.map((value, index) => [value, index]));
+
+  return [...groups].sort((left, right) => {
+    const leftIndex = orderLookup.get(left.id);
+    const rightIndex = orderLookup.get(right.id);
+    if (leftIndex !== undefined && rightIndex !== undefined) {
+      return leftIndex - rightIndex;
+    }
+    if (leftIndex !== undefined) {
+      return -1;
+    }
+    if (rightIndex !== undefined) {
+      return 1;
+    }
+
+    return (
+      left.displayName.localeCompare(right.displayName) ||
+      (left.ports[0] ?? 0) - (right.ports[0] ?? 0)
+    );
+  });
 }
 
 export function App(): JSX.Element {
@@ -47,17 +76,19 @@ export function App(): JSX.Element {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<ProcessRecord['primaryClassification'] | 'all'>(
+  const [typeFilter, setTypeFilter] = useState<PortProcess['primaryClassification'] | 'all'>(
     'all',
   );
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+  const [showSystem, setShowSystem] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [logProcess, setLogProcess] = useState<ProcessRecord | null>(null);
-  const [switchProcess, setSwitchProcess] = useState<ProcessRecord | null>(null);
-  const [reserveProcess, setReserveProcess] = useState<ProcessRecord | null>(null);
-  const [tagProcess, setTagProcess] = useState<ProcessRecord | null>(null);
-  const [restartProcess, setRestartProcess] = useState<ProcessRecord | null>(null);
-  const [pendingPorts, setPendingPorts] = useState<number[]>([]);
+  const [logProcess, setLogProcess] = useState<PortProcess | null>(null);
+  const [switchProcess, setSwitchProcess] = useState<PortProcess | null>(null);
+  const [reserveProcess, setReserveProcess] = useState<PortProcess | null>(null);
+  const [tagProcess, setTagProcess] = useState<PortProcess | null>(null);
+  const [restartProcess, setRestartProcess] = useState<PortProcess | null>(null);
+  const [pendingIds, setPendingIds] = useState<string[]>([]);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const lastEventIdRef = useRef(0);
   const toastIdRef = useRef(1);
@@ -132,63 +163,73 @@ export function App(): JSX.Element {
     document.documentElement.setAttribute('data-theme', config.settings.theme);
   }, [config.settings.theme]);
 
-  const filteredProcesses = useMemo(() => {
+  const groupedProcesses = useMemo(
+    () => sortGroups(groupProcesses(snapshot.processes, config), config.cardOrder),
+    [config, snapshot.processes],
+  );
+
+  const hiddenCount = groupedProcesses.filter((group) => group.section === 'hidden').length;
+  const systemCount = groupedProcesses.filter((group) => group.section === 'system').length;
+
+  const filteredGroups = useMemo(() => {
     const normalizedSearch = filterText(search);
-    return snapshot.processes.filter((processRecord) => {
-      if (
-        typeFilter !== 'all' &&
-        !processRecord.classifications.includes(typeFilter)
-      ) {
+    return groupedProcesses.filter((group) => {
+      if (!showHidden && group.section === 'hidden') {
         return false;
       }
-
-      if (activeTag && !processRecord.tags.includes(activeTag)) {
+      if (!showSystem && group.section === 'system') {
         return false;
       }
-
+      if (typeFilter !== 'all' && !group.classifications.includes(typeFilter)) {
+        return false;
+      }
+      if (activeTag && !group.tags.includes(activeTag)) {
+        return false;
+      }
       if (normalizedSearch.length === 0) {
         return true;
       }
 
       const haystack = [
-        processRecord.processName,
-        processRecord.command,
-        `${processRecord.port}`,
-        processRecord.tags.join(' '),
-        processRecord.classifications.join(' '),
+        group.displayName,
+        group.primaryProcess.command,
+        group.ports.join(' '),
+        group.tags.join(' '),
+        group.classifications.join(' '),
       ]
         .join(' ')
         .toLowerCase();
 
       return haystack.includes(normalizedSearch);
     });
-  }, [activeTag, search, snapshot.processes, typeFilter]);
+  }, [activeTag, groupedProcesses, search, showHidden, showSystem, typeFilter]);
 
-  const startablePorts = useMemo(
+  const startableIds = useMemo(
     () =>
-      snapshot.processes
+      groupedProcesses
         .filter(
-          (processRecord) =>
-            processRecord.status === 'empty' &&
+          (group) =>
+            !group.hasActiveProcess &&
             Boolean(
-              config.customRestartCommands[`port:${processRecord.port}`] ||
-                config.reservations.find((entry) => entry.port === processRecord.port)
-                  ?.restartTemplate,
+              config.customRestartCommands[`port:${group.primaryProcess.port}`] ||
+                config.reservations.find(
+                  (entry) => entry.port === group.primaryProcess.port,
+                )?.restartTemplate,
             ),
         )
-        .map((processRecord) => processRecord.port),
-    [config.customRestartCommands, config.reservations, snapshot.processes],
+        .map((group) => group.id),
+    [config.customRestartCommands, config.reservations, groupedProcesses],
   );
 
-  const withPendingPort = async (
-    port: number,
+  const withPendingGroup = async (
+    id: string,
     operation: () => Promise<void>,
   ): Promise<void> => {
-    setPendingPorts((current) => [...new Set([...current, port])]);
+    setPendingIds((current) => [...new Set([...current, id])]);
     try {
       await operation();
     } finally {
-      setPendingPorts((current) => current.filter((value) => value !== port));
+      setPendingIds((current) => current.filter((value) => value !== id));
     }
   };
 
@@ -240,67 +281,63 @@ export function App(): JSX.Element {
     });
   };
 
-  const openPrimaryTarget = (processRecord: ProcessRecord): void => {
-    if (
-      config.settings.cardClickBehavior === 'openLogs' ||
-      !usesBrowserOpen(processRecord)
-    ) {
-      setLogProcess(processRecord);
+  const openPrimaryTarget = (group: ProcessGroup): void => {
+    if (config.settings.cardClickBehavior === 'openLogs' || !usesBrowserOpen(group)) {
+      setLogProcess(group.primaryProcess);
       return;
     }
 
-    window.open(`http://localhost:${processRecord.port}`, '_blank');
+    window.open(`http://localhost:${group.primaryProcess.port}`, '_blank');
   };
 
-  const maybeConfirmSystemAction = (processRecord: ProcessRecord): boolean => {
-    if (!processRecord.isSystemProcess) {
+  const maybeConfirmSystemAction = (group: ProcessGroup): boolean => {
+    if (!group.isSystemGroup) {
       return true;
     }
 
     return window.confirm(
-      'This is a system process. Killing or suspending it may affect macOS. Continue?',
+      'This is a system process group. Killing or suspending it may affect macOS. Continue?',
     );
   };
 
-  const killProcess = (processRecord: ProcessRecord): void => {
-    if (!maybeConfirmSystemAction(processRecord)) {
+  const killGroup = (group: ProcessGroup): void => {
+    if (!maybeConfirmSystemAction(group)) {
       return;
     }
 
-    void withPendingPort(processRecord.port, async () => {
+    void withPendingGroup(group.id, async () => {
       await handleActionResponse(
-        postJson<ActionResponse>(`/api/processes/${processRecord.pid}/kill`),
+        postJson<ActionResponse>(`/api/processes/${group.pid}/kill`),
         'Kill Process',
       );
     });
   };
 
-  const toggleSuspend = (processRecord: ProcessRecord): void => {
-    if (!maybeConfirmSystemAction(processRecord)) {
+  const toggleSuspend = (group: ProcessGroup): void => {
+    if (!maybeConfirmSystemAction(group)) {
       return;
     }
 
-    void withPendingPort(processRecord.port, async () => {
+    void withPendingGroup(group.id, async () => {
       await handleActionResponse(
         postJson<ActionResponse>(
-          `/api/processes/${processRecord.pid}/${
-            processRecord.status === 'suspended' ? 'resume' : 'suspend'
-          }`,
+          `/api/processes/${group.pid}/${group.status === 'suspended' ? 'resume' : 'suspend'}`,
         ),
-        processRecord.status === 'suspended' ? 'Resume Process' : 'Suspend Process',
+        group.status === 'suspended' ? 'Resume Process' : 'Suspend Process',
       );
     });
   };
 
-  const togglePin = (processRecord: ProcessRecord): void => {
-    const pinned = config.pinnedPorts.includes(processRecord.port);
+  const togglePin = (group: ProcessGroup): void => {
+    const primaryProcess = group.primaryProcess;
+    const pinned = config.pinnedPorts.includes(primaryProcess.port);
 
-    void withPendingPort(processRecord.port, async () => {
+    void withPendingGroup(group.id, async () => {
       const response = await postJson<{ config: PortctlConfig; message: string }>(
         pinned
-          ? `/api/config/pinned-ports/${processRecord.port}`
+          ? `/api/config/pinned-ports/${primaryProcess.port}`
           : '/api/config/pinned-ports',
-        pinned ? undefined : { port: processRecord.port },
+        pinned ? undefined : { port: primaryProcess.port },
         pinned ? 'DELETE' : 'POST',
       );
       setConfig(response.config);
@@ -309,16 +346,16 @@ export function App(): JSX.Element {
     });
   };
 
-  const startPinnedPort = (processRecord: ProcessRecord): void => {
-    void withPendingPort(processRecord.port, async () => {
+  const startPinnedPort = (group: ProcessGroup): void => {
+    void withPendingGroup(group.id, async () => {
       await handleActionResponse(
-        postJson<ActionResponse>(`/api/ports/${processRecord.port}/start`),
+        postJson<ActionResponse>(`/api/ports/${group.primaryProcess.port}/start`),
         'Start Process',
       );
     });
   };
 
-  const saveTags = async (processRecord: ProcessRecord, tags: string[]): Promise<void> => {
+  const saveTags = async (processRecord: PortProcess, tags: string[]): Promise<void> => {
     const response = await postJson<{ config: PortctlConfig; message: string }>(
       `/api/config/tags/${encodeURIComponent(getTagStorageKey(processRecord))}`,
       { tags },
@@ -338,7 +375,10 @@ export function App(): JSX.Element {
     await refreshRef.current();
   };
 
-  const saveRestartCommand = async (processRecord: ProcessRecord, command: string): Promise<void> => {
+  const saveRestartCommand = async (
+    processRecord: PortProcess,
+    command: string,
+  ): Promise<void> => {
     const response = await postJson<{ config: PortctlConfig; message: string }>(
       `/api/config/custom-restart-commands/${encodeURIComponent(`port:${processRecord.port}`)}`,
       { command },
@@ -348,15 +388,40 @@ export function App(): JSX.Element {
     await refreshRef.current();
   };
 
-  const moveProcess = async (
-    processRecord: ProcessRecord,
+  const renameGroup = async (group: ProcessGroup, nextName: string): Promise<void> => {
+    const response = await postJson<{ config: PortctlConfig; message: string }>(
+      `/api/config/custom-names/${encodeURIComponent(getCustomNameKey(group.primaryProcess))}`,
+      { name: nextName },
+      'PUT',
+    );
+    setConfig(response.config);
+    addToast('success', 'Name Updated', response.message);
+    await refreshRef.current();
+  };
+
+  const toggleHidden = async (group: ProcessGroup): Promise<void> => {
+    const hidden = config.hiddenProcesses.includes(group.hiddenName);
+    const response = await postJson<{ config: PortctlConfig; message: string }>(
+      hidden
+        ? `/api/config/hidden-processes/${encodeURIComponent(group.hiddenName)}`
+        : '/api/config/hidden-processes',
+      hidden ? undefined : { name: group.hiddenName },
+      hidden ? 'DELETE' : 'POST',
+    );
+    setConfig(response.config);
+    addToast('success', hidden ? 'Process Visible' : 'Process Hidden', response.message);
+    await refreshRef.current();
+  };
+
+  const moveGroup = async (
+    group: ProcessGroup,
     targetPort: number,
     options?: {
       conflictStrategy?: 'swap' | 'moveOccupier' | 'killOccupier' | 'cancel';
       alternativePort?: number;
     },
   ): Promise<ActionResponse> => {
-    const response = await fetch(`/api/processes/${processRecord.pid}/move`, {
+    const response = await fetch(`/api/processes/${group.pid}/move`, {
       body: JSON.stringify({
         targetPort,
         ...options,
@@ -378,10 +443,10 @@ export function App(): JSX.Element {
     return body;
   };
 
-  const reorderCards = (ports: number[]): void => {
+  const reorderCards = (ids: string[]): void => {
     void postJson<{ config: PortctlConfig; message: string }>(
       '/api/config/card-order',
-      { cardOrder: ports },
+      { cardOrder: ids },
       'PUT',
     )
       .then((response) => {
@@ -401,6 +466,7 @@ export function App(): JSX.Element {
       <div className="app-frame">
         <Header
           activeTag={activeTag}
+          hiddenCount={hiddenCount}
           onClearTag={() => {
             setActiveTag(null);
           }}
@@ -408,6 +474,12 @@ export function App(): JSX.Element {
             setSettingsOpen(true);
           }}
           onSearchChange={setSearch}
+          onToggleHidden={() => {
+            setShowHidden((current) => !current);
+          }}
+          onToggleSystem={() => {
+            setShowSystem((current) => !current);
+          }}
           onToggleTheme={() => {
             void toggleTheme();
           }}
@@ -416,6 +488,9 @@ export function App(): JSX.Element {
             void changeViewMode(nextView);
           }}
           search={search}
+          showHidden={showHidden}
+          showSystem={showSystem}
+          systemCount={systemCount}
           theme={config.settings.theme}
           typeFilter={typeFilter}
           viewMode={viewMode}
@@ -423,18 +498,16 @@ export function App(): JSX.Element {
 
         <section className="status-strip">
           <div className="panel status-tile">
-            <label>Active Ports</label>
-            <strong>
-              {snapshot.processes.filter((processRecord) => processRecord.status !== 'empty').length}
-            </strong>
+            <label>Active Groups</label>
+            <strong>{groupedProcesses.filter((group) => group.hasActiveProcess).length}</strong>
           </div>
           <div className="panel status-tile">
             <label>Reserved</label>
             <strong>{config.reservations.length}</strong>
           </div>
           <div className="panel status-tile">
-            <label>Blocked</label>
-            <strong>{config.blockedPorts.length}</strong>
+            <label>Hidden</label>
+            <strong>{hiddenCount}</strong>
           </div>
           <div className="panel status-tile">
             <label>Daemon</label>
@@ -447,49 +520,52 @@ export function App(): JSX.Element {
         <section className="panel content-panel">
           {viewMode === 'card' ? (
             <CardGrid
-              onEditCommand={(processRecord) => {
-                setRestartProcess(processRecord);
+              groups={filteredGroups}
+              onEditCommand={(group) => {
+                setRestartProcess(group.primaryProcess);
               }}
-              onEditTags={(processRecord) => {
-                setTagProcess(processRecord);
+              onEditTags={(group) => {
+                setTagProcess(group.primaryProcess);
               }}
-              onKill={killProcess}
-              onMove={(processRecord) => {
-                setSwitchProcess(processRecord);
+              onKill={killGroup}
+              onMove={moveGroup}
+              onOpenMoveModal={(group) => {
+                setSwitchProcess(group.primaryProcess);
               }}
               onPrimaryOpen={openPrimaryTarget}
+              onRename={renameGroup}
               onReorder={reorderCards}
-              onReserve={(processRecord) => {
-                setReserveProcess(processRecord);
+              onReserve={(group) => {
+                setReserveProcess(group.primaryProcess);
               }}
               onStart={startPinnedPort}
               onTagClick={(tag) => {
                 setActiveTag(tag);
               }}
+              onToggleHidden={toggleHidden}
               onTogglePin={togglePin}
               onToggleSuspend={toggleSuspend}
-              onViewLogs={(processRecord) => {
-                setLogProcess(processRecord);
+              onViewLogs={(group) => {
+                setLogProcess(group.primaryProcess);
               }}
-              pendingPorts={pendingPorts}
+              pendingIds={pendingIds}
               pinnedPorts={config.pinnedPorts}
-              processes={filteredProcesses}
-              startablePorts={startablePorts}
+              startableIds={startableIds}
             />
           ) : (
             <TableView
-              onKill={killProcess}
-              onMove={(processRecord) => {
-                setSwitchProcess(processRecord);
+              groups={filteredGroups}
+              onKill={killGroup}
+              onMove={(group) => {
+                setSwitchProcess(group.primaryProcess);
               }}
               onPrimaryOpen={openPrimaryTarget}
               onTogglePin={togglePin}
               onToggleSuspend={toggleSuspend}
-              onViewLogs={(processRecord) => {
-                setLogProcess(processRecord);
+              onViewLogs={(group) => {
+                setLogProcess(group.primaryProcess);
               }}
-              pendingPorts={pendingPorts}
-              processes={filteredProcesses}
+              pendingIds={pendingIds}
             />
           )}
         </section>
@@ -569,7 +645,32 @@ export function App(): JSX.Element {
               setSwitchProcess(null);
             }}
             onMove={(targetPort, options) =>
-              moveProcess(switchProcess, targetPort, options)
+              moveGroup(
+                groupProcesses([switchProcess], config)[0] ?? {
+                  id: `port:${switchProcess.port}`,
+                  displayName: getDisplayName(switchProcess, config),
+                  processes: [switchProcess],
+                  primaryProcess: switchProcess,
+                  ports: switchProcess.ports,
+                  pid: switchProcess.pid,
+                  cpuPercent: switchProcess.cpuPercent,
+                  memoryRssKb: switchProcess.memoryRssKb,
+                  uptime: switchProcess.uptime,
+                  status: switchProcess.status,
+                  classifications: switchProcess.classifications,
+                  primaryClassification: switchProcess.primaryClassification,
+                  tags: switchProcess.tags,
+                  hiddenName: getDisplayName(switchProcess, config),
+                  isHidden: false,
+                  isSystemGroup: switchProcess.isSystemProcess,
+                  hasPinnedSlot: switchProcess.status === 'empty',
+                  hasActiveProcess: switchProcess.status !== 'empty',
+                  isPortctl: switchProcess.isPortctl,
+                  section: switchProcess.isSystemProcess ? 'system' : 'processes',
+                },
+                targetPort,
+                options,
+              )
             }
             processRecord={switchProcess}
           />

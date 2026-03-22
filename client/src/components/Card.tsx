@@ -1,34 +1,39 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
 
-import type { ProcessRecord } from '@shared/types';
+import type { ActionResponse, ProcessGroup } from '@shared/types';
 
+import { Popover } from './Popover';
 import { formatCpu, formatMemory } from '../utils/format';
 
 export interface CardActionHandlers {
-  onPrimaryOpen: (processRecord: ProcessRecord) => void;
-  onKill: (processRecord: ProcessRecord) => void;
-  onMove: (processRecord: ProcessRecord) => void;
-  onTogglePin: (processRecord: ProcessRecord) => void;
-  onToggleSuspend: (processRecord: ProcessRecord) => void;
-  onViewLogs: (processRecord: ProcessRecord) => void;
-  onReserve: (processRecord: ProcessRecord) => void;
-  onEditTags: (processRecord: ProcessRecord) => void;
-  onEditCommand: (processRecord: ProcessRecord) => void;
-  onStart: (processRecord: ProcessRecord) => void;
+  onPrimaryOpen: (group: ProcessGroup) => void;
+  onKill: (group: ProcessGroup) => void;
+  onMove: (group: ProcessGroup, targetPort: number) => Promise<ActionResponse>;
+  onOpenMoveModal: (group: ProcessGroup) => void;
+  onTogglePin: (group: ProcessGroup) => void;
+  onToggleSuspend: (group: ProcessGroup) => void;
+  onViewLogs: (group: ProcessGroup) => void;
+  onReserve: (group: ProcessGroup) => void;
+  onEditTags: (group: ProcessGroup) => void;
+  onEditCommand: (group: ProcessGroup) => void;
+  onRename: (group: ProcessGroup, nextName: string) => Promise<void>;
+  onToggleHidden: (group: ProcessGroup) => Promise<void>;
+  onStart: (group: ProcessGroup) => void;
   onTagClick: (tag: string) => void;
 }
 
 interface ProcessCardProps extends CardActionHandlers {
-  processRecord: ProcessRecord;
+  group: ProcessGroup;
   isPinned: boolean;
   canStart: boolean;
   isPending: boolean;
+  compact?: boolean;
 }
 
-function statusClass(status: ProcessRecord['status']): string {
+function statusClass(status: ProcessGroup['status']): string {
   switch (status) {
     case 'running':
       return 'status-running';
@@ -42,32 +47,80 @@ function statusClass(status: ProcessRecord['status']): string {
 }
 
 export function ProcessCard({
-  processRecord,
+  group,
   isPinned,
   canStart,
   isPending,
+  compact = false,
   onPrimaryOpen,
   onKill,
   onMove,
+  onOpenMoveModal,
   onTogglePin,
   onToggleSuspend,
   onViewLogs,
   onReserve,
   onEditTags,
   onEditCommand,
+  onRename,
+  onToggleHidden,
   onStart,
   onTagClick,
 }: ProcessCardProps): JSX.Element {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({
-      id: processRecord.port,
+      id: group.id,
     });
-  const [showKillConfirm, setShowKillConfirm] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [killOpen, setKillOpen] = useState(false);
+  const [switchOpen, setSwitchOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(group.displayName);
+  const [switchPort, setSwitchPort] = useState(`${group.primaryProcess.port}`);
+  const killButtonRef = useRef<HTMLButtonElement | null>(null);
+  const switchButtonRef = useRef<HTMLButtonElement | null>(null);
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (renaming) {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    }
+  }, [renaming]);
+
+  const groupedPorts = group.ports.map((port) => `:${port}`).join(' ');
+  const processCountLabel =
+    group.processes.length > 1 ? `${group.processes.length} grouped` : 'single process';
+
+  const submitRename = (): void => {
+    const trimmed = renameValue.trim();
+    void onRename(group, trimmed).finally(() => {
+      setRenaming(false);
+    });
+  };
+
+  const submitMove = (): void => {
+    const targetPort = Number.parseInt(switchPort, 10);
+    if (!Number.isInteger(targetPort)) {
+      return;
+    }
+
+    void onMove(group, targetPort).then((response) => {
+      if (response.ok) {
+        setSwitchOpen(false);
+        return;
+      }
+
+      if (response.conflict) {
+        setSwitchOpen(false);
+        onOpenMoveModal(group);
+      }
+    });
+  };
 
   return (
     <article
-      className={`card ${isDragging ? 'dragging' : ''}`}
+      className={`card ${compact ? 'card-compact' : ''} ${isDragging ? 'dragging' : ''}`}
       ref={setNodeRef}
       style={{
         transform: CSS.Transform.toString(transform),
@@ -79,59 +132,91 @@ export function ProcessCard({
           <span className="drag-handle" {...attributes} {...listeners}>
             |||
           </span>
-          <span>:{processRecord.port}</span>
+          <span>{groupedPorts}</span>
         </div>
         <div className="helper-row">
-          <span className={`status-dot ${statusClass(processRecord.status)}`} />
-          <span className="muted">
-            {processRecord.status === 'empty' ? 'empty' : processRecord.status}
-          </span>
+          <span className={`status-dot ${statusClass(group.status)}`} />
+          <span className="muted">{group.status}</span>
         </div>
       </div>
 
       <button
         className="ghost-button"
         onClick={() => {
-          if (processRecord.status !== 'empty') {
-            onPrimaryOpen(processRecord);
+          if (group.status !== 'empty') {
+            onPrimaryOpen(group);
           }
         }}
         style={{ padding: 0, textAlign: 'left' }}
         type="button"
       >
         <div className="card-title-row">
-          <h3 title={processRecord.processName}>{processRecord.processName}</h3>
-          <span className="muted">PID {processRecord.pid || '--'}</span>
+          {renaming ? (
+            <input
+              className="app-input"
+              onBlur={submitRename}
+              onChange={(event) => {
+                setRenameValue(event.target.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  submitRename();
+                }
+                if (event.key === 'Escape') {
+                  setRenaming(false);
+                  setRenameValue(group.displayName);
+                }
+              }}
+              ref={renameInputRef}
+              value={renameValue}
+            />
+          ) : (
+            <h3
+              onDoubleClick={() => {
+                setRenameValue(group.displayName);
+                setRenaming(true);
+              }}
+              title={group.displayName}
+            >
+              {group.displayName}
+            </h3>
+          )}
+          <span className="muted">PID {group.pid || '--'}</span>
         </div>
 
-        {processRecord.status === 'empty' ? (
+        {group.status === 'empty' ? (
           <div className="empty-state">
             <div className="muted">No active process</div>
-            {processRecord.reservation ? (
+            {group.primaryProcess.reservation ? (
               <div className="subtle">
-                Reserved for {processRecord.reservation.label ?? processRecord.reservation.matcher.value}
+                Reserved for{' '}
+                {group.primaryProcess.reservation.label ??
+                  group.primaryProcess.reservation.matcher.value}
               </div>
             ) : (
-              <div className="subtle">Pin a command template to start something here later.</div>
+              <div className="subtle">Pinned slot ready for a command template.</div>
             )}
           </div>
         ) : (
           <>
-            <div className="muted">{processRecord.uptime ?? 'uptime unavailable'}</div>
+            {!compact ? (
+              <div className="muted">
+                {group.uptime ?? 'uptime unavailable'} • {processCountLabel}
+              </div>
+            ) : (
+              <div className="muted">{processCountLabel}</div>
+            )}
             <div className="card-meta">
-              <span>CPU {formatCpu(processRecord.cpuPercent)}</span>
-              <span>MEM {formatMemory(processRecord.memoryRssKb)}</span>
-              <span>{processRecord.primaryClassification}</span>
-              {processRecord.workerCount > 0 ? (
-                <span>{processRecord.workerCount} workers</span>
-              ) : null}
+              <span>CPU {formatCpu(group.cpuPercent)}</span>
+              <span>MEM {formatMemory(group.memoryRssKb)}</span>
+              <span>{group.primaryClassification}</span>
             </div>
           </>
         )}
       </button>
 
       <div className="badges">
-        {processRecord.tags.map((tag) => (
+        {group.tags.map((tag) => (
           <button
             className="badge tag"
             key={tag}
@@ -143,46 +228,18 @@ export function ProcessCard({
             {tag}
           </button>
         ))}
-        {processRecord.isPortctl ? <span className="badge">portctl</span> : null}
-        {processRecord.isSystemProcess ? <span className="badge">system</span> : null}
-        {processRecord.reservation ? <span className="badge">reserved</span> : null}
+        {group.isPortctl ? <span className="badge">portctl</span> : null}
+        {group.isSystemGroup ? <span className="badge">system</span> : null}
+        {group.primaryProcess.reservation ? <span className="badge">reserved</span> : null}
       </div>
 
-      {showKillConfirm ? (
-        <div className="section-block">
-          <strong>Kill {processRecord.processName}?</strong>
-          <div className="helper-row">
-            <button
-              className="danger-button"
-              disabled={isPending}
-              onClick={() => {
-                setShowKillConfirm(false);
-                onKill(processRecord);
-              }}
-              type="button"
-            >
-              Confirm kill
-            </button>
-            <button
-              className="ghost-button"
-              onClick={() => {
-                setShowKillConfirm(false);
-              }}
-              type="button"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       <div className="actions-row">
-        {processRecord.status === 'empty' ? (
+        {group.status === 'empty' ? (
           <>
             <button
               className="secondary-button"
               onClick={() => {
-                onTogglePin(processRecord);
+                onTogglePin(group);
               }}
               type="button"
             >
@@ -192,7 +249,7 @@ export function ProcessCard({
               className="primary-button"
               disabled={!canStart || isPending}
               onClick={() => {
-                onStart(processRecord);
+                onStart(group);
               }}
               type="button"
             >
@@ -201,30 +258,110 @@ export function ProcessCard({
           </>
         ) : (
           <>
-            <button
-              className="danger-button"
-              disabled={!processRecord.canKill || isPending}
-              onClick={() => {
-                setShowKillConfirm(true);
-              }}
-              type="button"
-            >
-              Kill
-            </button>
+            <div className="popover-anchor">
+              <button
+                className="danger-button"
+                disabled={!group.primaryProcess.canKill || isPending}
+                onClick={() => {
+                  setKillOpen((current) => !current);
+                  setSwitchOpen(false);
+                }}
+                ref={killButtonRef}
+                type="button"
+              >
+                Kill
+              </button>
+              <Popover
+                anchorRef={killButtonRef}
+                onClose={() => {
+                  setKillOpen(false);
+                }}
+                open={killOpen}
+              >
+                <div className="popover-panel">
+                  <strong>Kill {group.displayName}?</strong>
+                  <div className="muted">This targets PID {group.pid}.</div>
+                  <div className="helper-row">
+                    <button
+                      className="danger-button"
+                      onClick={() => {
+                        setKillOpen(false);
+                        onKill(group);
+                      }}
+                      type="button"
+                    >
+                      Confirm kill
+                    </button>
+                    <button
+                      className="ghost-button"
+                      onClick={() => {
+                        setKillOpen(false);
+                      }}
+                      type="button"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </Popover>
+            </div>
+
+            <div className="popover-anchor">
+              <button
+                className="secondary-button"
+                disabled={isPending}
+                onClick={() => {
+                  setSwitchOpen((current) => !current);
+                  setKillOpen(false);
+                }}
+                ref={switchButtonRef}
+                type="button"
+              >
+                Switch Port
+              </button>
+              <Popover
+                align="right"
+                anchorRef={switchButtonRef}
+                onClose={() => {
+                  setSwitchOpen(false);
+                }}
+                open={switchOpen}
+              >
+                <div className="popover-panel">
+                  <strong>Move primary process</strong>
+                  <div className="muted">
+                    Current primary port {group.primaryProcess.port}
+                  </div>
+                  <input
+                    className="app-input"
+                    inputMode="numeric"
+                    onChange={(event) => {
+                      setSwitchPort(event.target.value);
+                    }}
+                    value={switchPort}
+                  />
+                  <div className="helper-row">
+                    <button className="primary-button" onClick={submitMove} type="button">
+                      Move
+                    </button>
+                    <button
+                      className="ghost-button"
+                      onClick={() => {
+                        setSwitchOpen(false);
+                      }}
+                      type="button"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </Popover>
+            </div>
+
             <button
               className="secondary-button"
-              disabled={isPending}
               onClick={() => {
-                onMove(processRecord);
-              }}
-              type="button"
-            >
-              Switch Port
-            </button>
-            <button
-              className="secondary-button"
-              onClick={() => {
-                onTogglePin(processRecord);
+                onTogglePin(group);
               }}
               type="button"
             >
@@ -242,78 +379,97 @@ export function ProcessCard({
             }}
             type="button"
           >
-            More
+            ...
           </button>
           {menuOpen ? (
             <div className="menu-popover">
               <button
                 onClick={() => {
                   setMenuOpen(false);
-                  if (processRecord.status === 'empty') {
-                    onEditCommand(processRecord);
+                  if (group.status === 'empty') {
+                    onEditCommand(group);
                     return;
                   }
-                  onViewLogs(processRecord);
+                  onViewLogs(group);
                 }}
                 type="button"
               >
-                {processRecord.status === 'empty' ? 'Edit restart command' : 'View logs'}
+                {group.status === 'empty' ? 'Edit Restart Command' : 'View Logs'}
               </button>
-              {processRecord.status !== 'empty' ? (
+              {group.status !== 'empty' ? (
                 <>
                   <button
                     onClick={() => {
                       setMenuOpen(false);
-                      onPrimaryOpen(processRecord);
+                      onPrimaryOpen(group);
                     }}
                     type="button"
                   >
-                    Open target
+                    Open in Browser
                   </button>
                   <button
-                    disabled={!processRecord.canSuspend}
+                    disabled={!group.primaryProcess.canSuspend}
                     onClick={() => {
                       setMenuOpen(false);
-                      onToggleSuspend(processRecord);
+                      onToggleSuspend(group);
                     }}
                     type="button"
                   >
-                    {processRecord.status === 'suspended' ? 'Resume' : 'Suspend'}
+                    {group.status === 'suspended' ? 'Resume' : 'Suspend'}
                   </button>
                   <button
                     onClick={() => {
                       setMenuOpen(false);
-                      onReserve(processRecord);
+                      onReserve(group);
                     }}
                     type="button"
                   >
-                    Reserve port
+                    Reserve Port
                   </button>
                 </>
               ) : null}
               <button
                 onClick={() => {
                   setMenuOpen(false);
-                  onEditTags(processRecord);
+                  onEditTags(group);
                 }}
                 type="button"
               >
-                Edit tags
+                Edit Tags
               </button>
               <button
                 onClick={() => {
                   setMenuOpen(false);
-                  onEditCommand(processRecord);
+                  setRenameValue(group.displayName);
+                  setRenaming(true);
                 }}
                 type="button"
               >
-                Edit restart command
+                Rename
               </button>
-              {processRecord.pid > 0 ? (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  void onToggleHidden(group);
+                }}
+                type="button"
+              >
+                {group.isHidden ? 'Unhide' : 'Hide'}
+              </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  onEditCommand(group);
+                }}
+                type="button"
+              >
+                Edit Restart Command
+              </button>
+              {group.pid > 0 ? (
                 <>
                   <button
                     onClick={() => {
-                      void navigator.clipboard.writeText(`${processRecord.pid}`);
+                      void navigator.clipboard.writeText(`${group.pid}`);
                       setMenuOpen(false);
                     }}
                     type="button"
@@ -322,12 +478,12 @@ export function ProcessCard({
                   </button>
                   <button
                     onClick={() => {
-                      void navigator.clipboard.writeText(processRecord.command);
+                      void navigator.clipboard.writeText(group.primaryProcess.command);
                       setMenuOpen(false);
                     }}
                     type="button"
                   >
-                    Copy command
+                    Copy Command
                   </button>
                 </>
               ) : null}

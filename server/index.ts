@@ -286,24 +286,7 @@ class PortctlServer {
       });
     }
 
-    return merged.sort((left, right) => this.sortByCardOrder(left.port, right.port, config));
-  }
-
-  private sortByCardOrder(leftPort: number, rightPort: number, config: PortctlConfig): number {
-    const leftIndex = config.cardOrder.indexOf(leftPort);
-    const rightIndex = config.cardOrder.indexOf(rightPort);
-
-    if (leftIndex !== -1 && rightIndex !== -1) {
-      return leftIndex - rightIndex;
-    }
-    if (leftIndex !== -1) {
-      return -1;
-    }
-    if (rightIndex !== -1) {
-      return 1;
-    }
-
-    return leftPort - rightPort;
+    return merged.sort((left, right) => left.port - right.port);
   }
 
   private async enforcePolicies(

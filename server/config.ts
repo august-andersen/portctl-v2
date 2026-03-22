@@ -20,6 +20,10 @@ function normalizePortList(values: number[]): number[] {
   return [...new Set(values.filter((value) => Number.isInteger(value) && value > 0))];
 }
 
+function normalizeStringList(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
 function normalizeReservations(reservations: Reservation[]): Reservation[] {
   return reservations
     .filter((reservation) => Number.isInteger(reservation.port) && reservation.port > 0)
@@ -59,12 +63,20 @@ function normalizeConfig(config: PortctlConfig): PortctlConfig {
   next.reservations = normalizeReservations(config.reservations ?? []);
   next.blockedPorts = normalizePortList(config.blockedPorts ?? []);
   next.pinnedPorts = normalizePortList(config.pinnedPorts ?? []);
-  next.cardOrder = normalizePortList(config.cardOrder ?? []);
+  next.hiddenProcesses = normalizeStringList(config.hiddenProcesses ?? []);
+  next.cardOrder = normalizeStringList(
+    (config.cardOrder ?? []).map((value) => String(value)),
+  );
   next.tags = Object.fromEntries(
     Object.entries(config.tags ?? {}).map(([key, value]) => [
       key,
       [...new Set(value.filter(Boolean).map((item) => item.trim()).filter(Boolean))],
     ]),
+  );
+  next.customNames = Object.fromEntries(
+    Object.entries(config.customNames ?? {})
+      .map(([key, value]) => [key, value.trim()] as const)
+      .filter((entry) => entry[1].length > 0),
   );
   next.customRestartCommands = Object.fromEntries(
     Object.entries(config.customRestartCommands ?? {})

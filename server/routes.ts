@@ -39,8 +39,16 @@ const portBodySchema = z.object({
   port: z.number().int().positive(),
 });
 
+const nameBodySchema = z.object({
+  name: z.string().trim().min(1),
+});
+
 const tagsBodySchema = z.object({
   tags: z.array(z.string()),
+});
+
+const customNameSchema = z.object({
+  name: z.string(),
 });
 
 const restartCommandSchema = z.object({
@@ -48,7 +56,7 @@ const restartCommandSchema = z.object({
 });
 
 const cardOrderSchema = z.object({
-  cardOrder: z.array(z.number().int().positive()),
+  cardOrder: z.array(z.string().min(1)),
 });
 
 const configSchema = z.object({
@@ -64,8 +72,10 @@ const configSchema = z.object({
   reservations: z.array(reservationSchema),
   blockedPorts: z.array(z.number().int().positive()),
   pinnedPorts: z.array(z.number().int().positive()),
+  hiddenProcesses: z.array(z.string()),
   tags: z.record(z.string(), z.array(z.string())),
-  cardOrder: z.array(z.number().int().positive()),
+  cardOrder: z.array(z.string()),
+  customNames: z.record(z.string(), z.string()),
   customRestartCommands: z.record(z.string(), z.string()),
 });
 
@@ -345,6 +355,45 @@ export function registerRoutes(
     });
   });
 
+  app.post('/api/config/hidden-processes', async (request, response) => {
+    const parsed = nameBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      sendError(response, 400, 'Invalid hidden process payload.');
+      return;
+    }
+    const { name } = parsed.data;
+
+    const nextConfig = await dependencies.configStore.update((current) => ({
+      ...current,
+      hiddenProcesses: [...new Set([...current.hiddenProcesses, name])],
+    }));
+
+    response.json({
+      ok: true,
+      message: `Hidden ${name}.`,
+      config: nextConfig,
+    });
+  });
+
+  app.delete('/api/config/hidden-processes/:name', async (request, response) => {
+    const name = request.params.name.trim();
+    if (!name) {
+      sendError(response, 400, 'Invalid process name.');
+      return;
+    }
+
+    const nextConfig = await dependencies.configStore.update((current) => ({
+      ...current,
+      hiddenProcesses: current.hiddenProcesses.filter((value) => value !== name),
+    }));
+
+    response.json({
+      ok: true,
+      message: `Unhid ${name}.`,
+      config: nextConfig,
+    });
+  });
+
   app.post('/api/config/tags/:key', async (request, response) => {
     const key = request.params.key;
     const parsed = tagsBodySchema.safeParse(request.body);
@@ -365,6 +414,36 @@ export function registerRoutes(
     response.json({
       ok: true,
       message: `Updated tags for ${key}.`,
+      config: nextConfig,
+    });
+  });
+
+  app.put('/api/config/custom-names/:key', async (request, response) => {
+    const key = request.params.key;
+    const parsed = customNameSchema.safeParse(request.body);
+    if (!parsed.success) {
+      sendError(response, 400, 'Invalid custom name payload.');
+      return;
+    }
+
+    const name = parsed.data.name.trim();
+    const nextConfig = await dependencies.configStore.update((current) => ({
+      ...current,
+      customNames: name
+        ? {
+            ...current.customNames,
+            [key]: name,
+          }
+        : Object.fromEntries(
+            Object.entries(current.customNames).filter(
+              ([entryKey]) => entryKey !== key,
+            ),
+          ),
+    }));
+
+    response.json({
+      ok: true,
+      message: name ? `Saved custom name for ${key}.` : `Removed custom name for ${key}.`,
       config: nextConfig,
     });
   });

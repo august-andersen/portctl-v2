@@ -14,8 +14,26 @@ const CLASSIFICATION_PRIORITY: ProcessType[] = [
   'other',
 ];
 
+type SectionCandidate = Omit<
+  ProcessGroup,
+  'section' | 'defaultGroupId' | 'canUngroup' | 'isUngrouped'
+>;
+
 function getCustomNameKey(processRecord: PortProcess): string {
   return `port:${processRecord.port}`;
+}
+
+function getDefaultGroupKey(
+  processRecord: PortProcess,
+  config: PortctlConfig,
+  displayName: string,
+): string {
+  const hasCustomName = Boolean(config.customNames[getCustomNameKey(processRecord)]);
+  if (processRecord.status === 'empty' && !hasCustomName) {
+    return `slot:${processRecord.port}`;
+  }
+
+  return `app:${displayName.trim().toLowerCase()}`;
 }
 
 export function getDisplayName(
@@ -39,12 +57,12 @@ function getGroupKey(
   config: PortctlConfig,
   displayName: string,
 ): string {
-  const hasCustomName = Boolean(config.customNames[getCustomNameKey(processRecord)]);
-  if (processRecord.status === 'empty' && !hasCustomName) {
-    return `slot:${processRecord.port}`;
+  const defaultGroupKey = getDefaultGroupKey(processRecord, config, displayName);
+  if (config.ungroupedGroups.includes(defaultGroupKey) && defaultGroupKey.startsWith('app:')) {
+    return `${defaultGroupKey}:port:${processRecord.port}`;
   }
 
-  return `app:${displayName.trim().toLowerCase()}`;
+  return defaultGroupKey;
 }
 
 function resolvePrimaryProcess(processes: PortProcess[]): PortProcess {
@@ -95,7 +113,7 @@ function resolvePrimaryClassification(classifications: ProcessType[]): ProcessTy
   );
 }
 
-function resolveSection(group: Omit<ProcessGroup, 'section'>): ProcessGroup['section'] {
+function resolveSection(group: SectionCandidate): ProcessGroup['section'] {
   if (group.isHidden) {
     return 'hidden';
   }
@@ -115,6 +133,16 @@ export function groupProcesses(
   processes: PortProcess[],
   config: PortctlConfig,
 ): ProcessGroup[] {
+  const defaultGroupCounts = new Map<string, number>();
+  for (const processRecord of processes) {
+    const displayName = getDisplayName(processRecord, config);
+    const defaultGroupKey = getDefaultGroupKey(processRecord, config, displayName);
+    defaultGroupCounts.set(
+      defaultGroupKey,
+      (defaultGroupCounts.get(defaultGroupKey) ?? 0) + 1,
+    );
+  }
+
   const buckets = new Map<string, PortProcess[]>();
 
   for (const processRecord of processes) {
@@ -128,6 +156,7 @@ export function groupProcesses(
   return [...buckets.entries()].map(([id, groupedProcesses]) => {
     const primaryProcess = resolvePrimaryProcess(groupedProcesses);
     const displayName = getDisplayName(primaryProcess, config);
+    const defaultGroupId = getDefaultGroupKey(primaryProcess, config, displayName);
     const classifications = [
       ...new Set(groupedProcesses.flatMap((processRecord) => processRecord.classifications)),
     ];
@@ -138,7 +167,7 @@ export function groupProcesses(
       (left, right) => left - right,
     );
 
-    const baseGroup: Omit<ProcessGroup, 'section'> = {
+    const baseGroup: SectionCandidate = {
       id,
       displayName,
       processes: [...groupedProcesses].sort((left, right) => left.port - right.port),
@@ -171,6 +200,12 @@ export function groupProcesses(
 
     return {
       ...baseGroup,
+      defaultGroupId,
+      canUngroup:
+        defaultGroupId.startsWith('app:') &&
+        ((defaultGroupCounts.get(defaultGroupId) ?? 0) > 1 ||
+          config.ungroupedGroups.includes(defaultGroupId)),
+      isUngrouped: config.ungroupedGroups.includes(defaultGroupId),
       section: resolveSection(baseGroup),
     };
   });

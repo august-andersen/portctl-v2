@@ -21,6 +21,7 @@ export interface CardActionHandlers {
   onEditCommand: (group: ProcessGroup) => void;
   onRename: (group: ProcessGroup, nextName: string) => Promise<void>;
   onToggleHidden: (group: ProcessGroup) => Promise<void>;
+  onToggleUngroup: (group: ProcessGroup) => Promise<void>;
   onStart: (group: ProcessGroup) => void;
   onTagClick: (tag: string) => void;
 }
@@ -33,16 +34,16 @@ interface ProcessCardProps extends CardActionHandlers {
   compact?: boolean;
 }
 
-function statusClass(status: ProcessGroup['status']): string {
+function getStatusLabel(status: ProcessGroup['status']): string | null {
   switch (status) {
-    case 'running':
-      return 'status-running';
     case 'suspended':
-      return 'status-suspended';
+      return 'Paused';
     case 'error':
-      return 'status-error';
+      return 'Issue';
     case 'empty':
-      return 'status-empty';
+      return 'Empty';
+    case 'running':
+      return null;
   }
 }
 
@@ -64,6 +65,7 @@ export function ProcessCard({
   onEditCommand,
   onRename,
   onToggleHidden,
+  onToggleUngroup,
   onStart,
   onTagClick,
 }: ProcessCardProps): JSX.Element {
@@ -79,6 +81,7 @@ export function ProcessCard({
   const [switchPort, setSwitchPort] = useState(`${group.primaryProcess.port}`);
   const killButtonRef = useRef<HTMLButtonElement | null>(null);
   const switchButtonRef = useRef<HTMLButtonElement | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const renameInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -91,6 +94,7 @@ export function ProcessCard({
   const groupedPorts = group.ports.map((port) => `:${port}`).join(' ');
   const processCountLabel =
     group.processes.length > 1 ? `${group.processes.length} grouped` : 'single process';
+  const statusLabel = getStatusLabel(group.status);
 
   const submitRename = (): void => {
     const trimmed = renameValue.trim();
@@ -134,10 +138,6 @@ export function ProcessCard({
           </span>
           <span>{groupedPorts}</span>
         </div>
-        <div className="helper-row">
-          <span className={`status-dot ${statusClass(group.status)}`} />
-          <span className="muted">{group.status}</span>
-        </div>
       </div>
 
       <button
@@ -151,36 +151,48 @@ export function ProcessCard({
         type="button"
       >
         <div className="card-title-row">
-          {renaming ? (
-            <input
-              className="app-input"
-              onBlur={submitRename}
-              onChange={(event) => {
-                setRenameValue(event.target.value);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  submitRename();
-                }
-                if (event.key === 'Escape') {
-                  setRenaming(false);
-                  setRenameValue(group.displayName);
-                }
-              }}
-              ref={renameInputRef}
-              value={renameValue}
-            />
-          ) : (
-            <h3
-              onDoubleClick={() => {
-                setRenameValue(group.displayName);
-                setRenaming(true);
-              }}
-              title={group.displayName}
-            >
-              {group.displayName}
-            </h3>
-          )}
+          <div className="card-title-main">
+            {renaming ? (
+              <input
+                className="app-input"
+                onBlur={submitRename}
+                onChange={(event) => {
+                  setRenameValue(event.target.value);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    submitRename();
+                  }
+                  if (event.key === 'Escape') {
+                    setRenaming(false);
+                    setRenameValue(group.displayName);
+                  }
+                }}
+                ref={renameInputRef}
+                value={renameValue}
+              />
+            ) : (
+              <>
+                <h3
+                  onDoubleClick={() => {
+                    setRenameValue(group.displayName);
+                    setRenaming(true);
+                  }}
+                  title={group.displayName}
+                >
+                  {group.displayName}
+                </h3>
+                {group.status === 'running' ? (
+                  <span className="live-indicator" title="Live process">
+                    <span className="live-indicator-pulse" />
+                    <span className="live-indicator-dot" />
+                    <span>Live</span>
+                  </span>
+                ) : null}
+                {statusLabel ? <span className="status-chip">{statusLabel}</span> : null}
+              </>
+            )}
+          </div>
           <span className="muted">PID {group.pid || '--'}</span>
         </div>
 
@@ -377,12 +389,20 @@ export function ProcessCard({
             onClick={() => {
               setMenuOpen((current) => !current);
             }}
+            ref={menuButtonRef}
             type="button"
           >
             ...
           </button>
-          {menuOpen ? (
-            <div className="menu-popover">
+          <Popover
+            align="right"
+            anchorRef={menuButtonRef}
+            onClose={() => {
+              setMenuOpen(false);
+            }}
+            open={menuOpen}
+          >
+            <div className="popover-panel menu-panel">
               <button
                 onClick={() => {
                   setMenuOpen(false);
@@ -465,6 +485,17 @@ export function ProcessCard({
               >
                 Edit Restart Command
               </button>
+              {group.canUngroup ? (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void onToggleUngroup(group);
+                  }}
+                  type="button"
+                >
+                  {group.isUngrouped ? 'Regroup Similar Ports' : 'Ungroup Similar Ports'}
+                </button>
+              ) : null}
               {group.pid > 0 ? (
                 <>
                   <button
@@ -488,7 +519,7 @@ export function ProcessCard({
                 </>
               ) : null}
             </div>
-          ) : null}
+          </Popover>
         </div>
       </div>
     </article>

@@ -44,6 +44,7 @@ export interface PortctlConfig {
   blockedPorts: number[];
   pinnedPorts: number[];
   hiddenProcesses: string[];
+  ungroupedGroups: string[];
   tags: Record<string, string[]>;
   cardOrder: string[];
   customNames: Record<string, string>;
@@ -87,6 +88,7 @@ export type ProcessRecord = PortProcess;
 
 export interface ProcessGroup {
   id: string;
+  defaultGroupId: string;
   displayName: string;
   processes: PortProcess[];
   primaryProcess: PortProcess;
@@ -105,6 +107,8 @@ export interface ProcessGroup {
   hasPinnedSlot: boolean;
   hasActiveProcess: boolean;
   isPortctl: boolean;
+  canUngroup: boolean;
+  isUngrouped: boolean;
   section: 'pinned' | 'processes' | 'system' | 'hidden';
 }
 
@@ -179,6 +183,7 @@ export const DEFAULT_CONFIG: PortctlConfig = {
   blockedPorts: [],
   pinnedPorts: [],
   hiddenProcesses: [],
+  ungroupedGroups: [],
   tags: {},
   cardOrder: [],
   customNames: {},

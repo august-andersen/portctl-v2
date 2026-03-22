@@ -67,9 +67,12 @@ export function Popover({
 
     const nextPlacement =
       roomBelow < popoverBounds.height + 18 && roomAbove > roomBelow ? 'top' : 'bottom';
+    const availableRoom =
+      (nextPlacement === 'top' ? roomAbove : roomBelow) - 18;
     contentRef.current.dataset.placement = nextPlacement;
     contentRef.current.classList.toggle('popover-top', nextPlacement === 'top');
     contentRef.current.classList.toggle('popover-bottom', nextPlacement === 'bottom');
+    contentRef.current.style.maxHeight = `${Math.max(0, availableRoom)}px`;
   }, [anchorRef, open]);
 
   if (!open) {

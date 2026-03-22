@@ -86,8 +86,19 @@ export function LogViewer({
   }, [logs, search]);
 
   return (
-    <div className="overlay" role="presentation">
-      <div className="modal">
+    <div
+      className="overlay"
+      onClick={() => {
+        onClose();
+      }}
+      role="presentation"
+    >
+      <div
+        className="modal"
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+      >
         <div className="modal-header">
           <div>
             <h2>{processRecord.processName}</h2>

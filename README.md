@@ -1,8 +1,13 @@
 # portctl
 
+[![GitHub Release](https://img.shields.io/github/v/release/august-andersen/portctl?display_name=tag)](https://github.com/august-andersen/portctl/releases)
+[![GitHub License](https://img.shields.io/github/license/august-andersen/portctl)](https://github.com/august-andersen/portctl/blob/main/LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/august-andersen/portctl?style=social)](https://github.com/august-andersen/portctl/stargazers)
+[![GitHub Last Commit](https://img.shields.io/github/last-commit/august-andersen/portctl)](https://github.com/august-andersen/portctl/commits/main)
+
 Local-only macOS dashboard for seeing what is listening on your ports, moving processes between ports, and reserving the ports you always want kept free.
 
-![portctl dashboard preview](docs/dashboard-preview.svg)
+![portctl dashboard preview](preview-image.png)
 
 ## Features
 

@@ -43,6 +43,10 @@ const nameBodySchema = z.object({
   name: z.string().trim().min(1),
 });
 
+const idBodySchema = z.object({
+  id: z.string().trim().min(1),
+});
+
 const tagsBodySchema = z.object({
   tags: z.array(z.string()),
 });
@@ -73,6 +77,7 @@ const configSchema = z.object({
   blockedPorts: z.array(z.number().int().positive()),
   pinnedPorts: z.array(z.number().int().positive()),
   hiddenProcesses: z.array(z.string()),
+  ungroupedGroups: z.array(z.string()),
   tags: z.record(z.string(), z.array(z.string())),
   cardOrder: z.array(z.string()),
   customNames: z.record(z.string(), z.string()),
@@ -390,6 +395,45 @@ export function registerRoutes(
     response.json({
       ok: true,
       message: `Unhid ${name}.`,
+      config: nextConfig,
+    });
+  });
+
+  app.post('/api/config/ungrouped-groups', async (request, response) => {
+    const parsed = idBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      sendError(response, 400, 'Invalid ungrouped group payload.');
+      return;
+    }
+    const { id } = parsed.data;
+
+    const nextConfig = await dependencies.configStore.update((current) => ({
+      ...current,
+      ungroupedGroups: [...new Set([...current.ungroupedGroups, id])],
+    }));
+
+    response.json({
+      ok: true,
+      message: `Ungrouped ${id}.`,
+      config: nextConfig,
+    });
+  });
+
+  app.delete('/api/config/ungrouped-groups/:id', async (request, response) => {
+    const id = request.params.id.trim();
+    if (!id) {
+      sendError(response, 400, 'Invalid group id.');
+      return;
+    }
+
+    const nextConfig = await dependencies.configStore.update((current) => ({
+      ...current,
+      ungroupedGroups: current.ungroupedGroups.filter((value) => value !== id),
+    }));
+
+    response.json({
+      ok: true,
+      message: `Regrouped ${id}.`,
       config: nextConfig,
     });
   });

@@ -115,7 +115,7 @@ a {
 .wordmark {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
 }
 
 .wordmark-badge {
@@ -419,12 +419,83 @@ a {
   gap: 10px;
 }
 
+.card-title-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .card-title-row h3 {
   margin: 0;
   font-size: 1.2rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.live-indicator,
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.live-indicator {
+  position: relative;
+  color: #b8ffcf;
+  background: rgba(67, 203, 128, 0.12);
+  border: 1px solid rgba(67, 203, 128, 0.24);
+}
+
+.live-indicator-pulse,
+.live-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--success);
+}
+
+.live-indicator-pulse {
+  position: absolute;
+  left: 10px;
+  opacity: 0.38;
+  animation: live-pulse 1.7s ease-out infinite;
+}
+
+.live-indicator-dot {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 16px rgba(67, 203, 128, 0.55);
+}
+
+.status-chip {
+  color: var(--text-muted);
+  background: var(--background-soft);
+  border: 1px solid var(--surface-border);
+}
+
+@keyframes live-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+
+  70% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
 }
 
 .muted {
@@ -524,6 +595,7 @@ a {
   z-index: 20;
   min-width: 240px;
   max-width: 320px;
+  overflow-y: auto;
 }
 
 .popover-bottom {
@@ -553,20 +625,11 @@ a {
   box-shadow: var(--shadow);
 }
 
-.menu-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  min-width: 220px;
-  z-index: 12;
-  background: var(--surface-strong);
-  border: 1px solid var(--surface-border-strong);
-  border-radius: 18px;
+.menu-panel {
   padding: 8px;
-  box-shadow: var(--shadow);
 }
 
-.menu-popover button {
+.menu-panel button {
   width: 100%;
   background: transparent;
   border: none;
@@ -576,7 +639,7 @@ a {
   border-radius: 12px;
 }
 
-.menu-popover button:hover {
+.menu-panel button:hover {
   background: var(--background-soft);
 }
 

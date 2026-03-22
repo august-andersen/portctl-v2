@@ -51,7 +51,6 @@ export function Header({
   return (
     <header className="panel header-bar">
       <div className="wordmark">
-        <div className="wordmark-badge">pc</div>
         <div className="wordmark-copy">
           <h1>portctl</h1>
           <p>Watch, move, and reserve local ports without memorizing lsof.</p>

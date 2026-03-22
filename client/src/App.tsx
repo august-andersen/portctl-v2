@@ -26,7 +26,7 @@ import { TagEditor } from './components/TagEditor';
 import { ToastViewport, type ToastItem } from './components/Toast';
 import { fetchJson, postJson } from './utils/api';
 import { filterText } from './utils/format';
-import { getDisplayName, groupProcesses } from './utils/groupProcesses';
+import { groupProcesses } from './utils/groupProcesses';
 
 function getTagStorageKey(processRecord: PortProcess): string {
   return processRecord.reservation
@@ -40,6 +40,31 @@ function getCustomNameKey(processRecord: PortProcess): string {
 
 function usesBrowserOpen(group: ProcessGroup): boolean {
   return group.classifications.includes('web');
+}
+
+function shouldDisplayToast(
+  level: EventLevel,
+  title: string,
+  message: string,
+): boolean {
+  if (level === 'error') {
+    return true;
+  }
+
+  const normalized = `${title} ${message}`.toLowerCase();
+  return /\bmoved\b|\bswapped\b/.test(normalized);
+}
+
+function buildStandaloneGroup(
+  processRecord: PortProcess,
+  config: PortctlConfig,
+): ProcessGroup {
+  const group = groupProcesses([processRecord], config)[0];
+  if (!group) {
+    throw new Error(`Could not create a process group for port ${processRecord.port}.`);
+  }
+
+  return group;
 }
 
 function sortGroups(groups: ProcessGroup[], cardOrder: string[]): ProcessGroup[] {
@@ -96,6 +121,10 @@ export function App(): JSX.Element {
   const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const addToast = (level: EventLevel, title: string, message: string): void => {
+    if (!shouldDisplayToast(level, title, message)) {
+      return;
+    }
+
     const nextToast: ToastItem = {
       id: toastIdRef.current,
       level,
@@ -413,6 +442,18 @@ export function App(): JSX.Element {
     await refreshRef.current();
   };
 
+  const toggleUngroup = async (group: ProcessGroup): Promise<void> => {
+    const response = await postJson<{ config: PortctlConfig; message: string }>(
+      group.isUngrouped
+        ? `/api/config/ungrouped-groups/${encodeURIComponent(group.defaultGroupId)}`
+        : '/api/config/ungrouped-groups',
+      group.isUngrouped ? undefined : { id: group.defaultGroupId },
+      group.isUngrouped ? 'DELETE' : 'POST',
+    );
+    setConfig(response.config);
+    await refreshRef.current();
+  };
+
   const moveGroup = async (
     group: ProcessGroup,
     targetPort: number,
@@ -545,6 +586,7 @@ export function App(): JSX.Element {
               onToggleHidden={toggleHidden}
               onTogglePin={togglePin}
               onToggleSuspend={toggleSuspend}
+              onToggleUngroup={toggleUngroup}
               onViewLogs={(group) => {
                 setLogProcess(group.primaryProcess);
               }}
@@ -645,32 +687,7 @@ export function App(): JSX.Element {
               setSwitchProcess(null);
             }}
             onMove={(targetPort, options) =>
-              moveGroup(
-                groupProcesses([switchProcess], config)[0] ?? {
-                  id: `port:${switchProcess.port}`,
-                  displayName: getDisplayName(switchProcess, config),
-                  processes: [switchProcess],
-                  primaryProcess: switchProcess,
-                  ports: switchProcess.ports,
-                  pid: switchProcess.pid,
-                  cpuPercent: switchProcess.cpuPercent,
-                  memoryRssKb: switchProcess.memoryRssKb,
-                  uptime: switchProcess.uptime,
-                  status: switchProcess.status,
-                  classifications: switchProcess.classifications,
-                  primaryClassification: switchProcess.primaryClassification,
-                  tags: switchProcess.tags,
-                  hiddenName: getDisplayName(switchProcess, config),
-                  isHidden: false,
-                  isSystemGroup: switchProcess.isSystemProcess,
-                  hasPinnedSlot: switchProcess.status === 'empty',
-                  hasActiveProcess: switchProcess.status !== 'empty',
-                  isPortctl: switchProcess.isPortctl,
-                  section: switchProcess.isSystemProcess ? 'system' : 'processes',
-                },
-                targetPort,
-                options,
-              )
+              moveGroup(buildStandaloneGroup(switchProcess, config), targetPort, options)
             }
             processRecord={switchProcess}
           />

@@ -4,7 +4,7 @@
     "dashboardPort": 54430,
     "pollingInterval": 1000,
     "defaultView": "card",
-    "theme": "light",
+    "theme": "dark",
     "cardClickBehavior": "openBrowser",
     "logBufferSize": 10000
   },
@@ -13,7 +13,8 @@
   "pinnedPorts": [
     3000,
     8080,
-    54430
+    54430,
+    11434
   ],
   "hiddenProcesses": [
     "Raycast",

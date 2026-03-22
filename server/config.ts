@@ -64,6 +64,7 @@ function normalizeConfig(config: PortctlConfig): PortctlConfig {
   next.blockedPorts = normalizePortList(config.blockedPorts ?? []);
   next.pinnedPorts = normalizePortList(config.pinnedPorts ?? []);
   next.hiddenProcesses = normalizeStringList(config.hiddenProcesses ?? []);
+  next.ungroupedGroups = normalizeStringList(config.ungroupedGroups ?? []);
   next.cardOrder = normalizeStringList(
     (config.cardOrder ?? []).map((value) => String(value)),
   );

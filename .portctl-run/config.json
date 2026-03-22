@@ -8,12 +8,23 @@
     "cardClickBehavior": "openBrowser",
     "logBufferSize": 10000
   },
-  "reservations": [],
+  "reservations": [
+    {
+      "port": 54430,
+      "matcher": {
+        "type": "command_contains",
+        "value": "node"
+      },
+      "restartTemplate": null,
+      "label": "node"
+    }
+  ],
   "blockedPorts": [],
   "pinnedPorts": [
     3000,
     8080,
-    54430
+    54430,
+    11434
   ],
   "hiddenProcesses": [
     "Raycast",

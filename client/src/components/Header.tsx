@@ -51,6 +51,12 @@ export function Header({
   return (
     <header className="panel header-bar">
       <div className="wordmark">
+        <img
+          alt=""
+          aria-hidden="true"
+          className="wordmark-logo"
+          src="/logo.png"
+        />
         <div className="wordmark-copy">
           <h1>portctl</h1>
           <p>Watch, move, and reserve local ports without memorizing lsof.</p>

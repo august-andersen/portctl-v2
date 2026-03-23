@@ -24,17 +24,20 @@
     3000,
     8080,
     54430,
-    11434
+    5173,
+    3001
   ],
   "hiddenProcesses": [
     "Raycast",
     "Cursor Helper (Plugin)"
   ],
   "ungroupedGroups": [
-    "app:python"
+    "app:python",
+    "app:node"
   ],
   "tags": {
-    "port:54430": []
+    "port:54430": [],
+    "matcher:node": []
   },
   "cardOrder": [
     "app:portctl",
@@ -48,7 +51,9 @@
     "port:54430": "portctl",
     "port:37054": "portctl",
     "port:8080": "KOTrade",
-    "port:3000": "Viral Studios"
+    "port:3000": "Viral Studios",
+    "port:5173": "hypothesis-lab",
+    "port:3001": "hypothesis-lab-backend"
   },
   "customRestartCommands": {}
 }

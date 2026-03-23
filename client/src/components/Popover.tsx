@@ -2,6 +2,8 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useState,
+  type CSSProperties,
   type ReactNode,
   type RefObject,
 } from 'react';
@@ -22,6 +24,10 @@ export function Popover({
   align = 'left',
 }: PopoverProps) {
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const [positionStyle, setPositionStyle] = useState<CSSProperties>({
+    visibility: 'hidden',
+  });
+  const [placement, setPlacement] = useState<'top' | 'bottom'>('bottom');
 
   useEffect(() => {
     if (!open) {
@@ -60,20 +66,59 @@ export function Popover({
       return;
     }
 
-    const anchorBounds = anchorRef.current.getBoundingClientRect();
-    const popoverBounds = contentRef.current.getBoundingClientRect();
-    const roomBelow = window.innerHeight - anchorBounds.bottom;
-    const roomAbove = anchorBounds.top;
+    const viewportPadding = 12;
+    const gap = 8;
 
-    const nextPlacement =
-      roomBelow < popoverBounds.height + 18 && roomAbove > roomBelow ? 'top' : 'bottom';
-    const availableRoom =
-      (nextPlacement === 'top' ? roomAbove : roomBelow) - 18;
-    contentRef.current.dataset.placement = nextPlacement;
-    contentRef.current.classList.toggle('popover-top', nextPlacement === 'top');
-    contentRef.current.classList.toggle('popover-bottom', nextPlacement === 'bottom');
-    contentRef.current.style.maxHeight = `${Math.max(0, availableRoom)}px`;
-  }, [anchorRef, open]);
+    const updatePosition = (): void => {
+      if (!anchorRef.current || !contentRef.current) {
+        return;
+      }
+
+      const anchorBounds = anchorRef.current.getBoundingClientRect();
+      const popoverWidth = contentRef.current.offsetWidth;
+      const popoverHeight = contentRef.current.offsetHeight;
+      const roomBelow = window.innerHeight - anchorBounds.bottom - viewportPadding;
+      const roomAbove = anchorBounds.top - viewportPadding;
+      const nextPlacement =
+        roomBelow < popoverHeight + gap && roomAbove > roomBelow ? 'top' : 'bottom';
+      const availableRoom = Math.max(
+        0,
+        (nextPlacement === 'top' ? roomAbove : roomBelow) - gap,
+      );
+      const visibleHeight = Math.min(popoverHeight, availableRoom);
+      const preferredLeft =
+        align === 'right' ? anchorBounds.right - popoverWidth : anchorBounds.left;
+      const maxLeft = Math.max(
+        viewportPadding,
+        window.innerWidth - viewportPadding - popoverWidth,
+      );
+      const left = Math.min(Math.max(preferredLeft, viewportPadding), maxLeft);
+      const top =
+        nextPlacement === 'top'
+          ? Math.max(viewportPadding, anchorBounds.top - visibleHeight - gap)
+          : Math.min(
+              anchorBounds.bottom + gap,
+              window.innerHeight - viewportPadding - visibleHeight,
+            );
+
+      setPlacement(nextPlacement);
+      setPositionStyle({
+        left: `${left}px`,
+        maxHeight: `${availableRoom}px`,
+        top: `${top}px`,
+        visibility: 'visible',
+      });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [align, anchorRef, open]);
 
   if (!open) {
     return null;
@@ -81,9 +126,10 @@ export function Popover({
 
   return (
     <div
-      className={`popover popover-bottom popover-${align}`}
-      data-placement="bottom"
+      className={`popover popover-${placement}`}
+      data-placement={placement}
       ref={contentRef}
+      style={positionStyle}
     >
       {children}
     </div>

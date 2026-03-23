@@ -8,6 +8,7 @@ const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   root: currentDirectory,
+  publicDir: path.resolve(currentDirectory, '..', 'public'),
   plugins: [react()],
   resolve: {
     alias: {

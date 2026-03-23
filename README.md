@@ -7,7 +7,7 @@
 
 Persistent local port management for macOS, with a daemon-backed dashboard for inspecting listeners, reassigning ports, and enforcing the port layout you actually want.
 
-![portctl dashboard preview](preview-image.png)
+![portctl dashboard preview](docs/preview-image.png)
 
 ## Features
 
